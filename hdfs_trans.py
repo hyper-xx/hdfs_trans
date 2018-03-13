@@ -5,8 +5,9 @@ import threading
 import time
 import queue
 import json, mimetypes
+import requests
 import os
-import time
+import time,datetime
 import hdfs
 from hdfs import InsecureClient
 import logging
@@ -26,6 +27,8 @@ oldhdfs_url=cfg.get('oldhdfs','url')
 oldhdfs_root=cfg.get('oldhdfs','root')
 newhdfs_url=cfg.get('newhdfs','url')
 newhdfs_root=cfg.get('newhdfs','root')
+dingrobot=cfg.get('alert','dingrobot')
+notice=cfg.get('alert','notice')
 
 
 oldhdfs = hdfs.Client(oldhdfs_url, root=oldhdfs_root, timeout=100, session=False)
@@ -93,10 +96,30 @@ class Consumer(threading.Thread):
         if os.path.exists(downfile):
             os.remove(downfile)
 
+    def ding_alert(self,message):
+        dingurl=dingrobot
+        atmobile=list(map(str, notice))
+        data={
+            "msgtype":"text",
+            "text":{
+                "content":message
+            },
+            "at":{
+                "atMobiles":atmobile,
+            }
+        }
+        headers = {'Content-Type': 'application/json; charset=utf-8'}
+        data=json.dumps(data)
+        requests.post(dingurl,headers=headers,data=data)
+
+
 
 
     def run(self):
         while 1:
+            if queuepipe.empty() == True:
+                n=str(datetime.datetime.now())
+                Consumer.ding_alert(self,n+'|当前迁移任务完成，请提交新任务。')
 
             hdfs_url,hdfs_dir,file=queuepipe.get()
 
@@ -124,8 +147,11 @@ class Consumer(threading.Thread):
                         Consumer.put_newhdfs_file(self, hdfs_url, tmp_file)
                         Consumer.del_tmpfile(self, tmp_file)
                         logging.info('|' + hdfs_url + '|' + 'file reupload success.')
+                        Consumer.ding_alert(self,str(datetime.datetime.now())+'|'+hdfs_url+ '|' + 'file reupload success.')
                     else:
                         logging.error('|' + hdfs_url + '|' + 'file size error.')
+                        Consumer.ding_alert(self, str(
+                            datetime.datetime.now()) + '|' + hdfs_url + '|' + 'file size error.')
 
 
 
