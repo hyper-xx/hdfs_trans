@@ -77,7 +77,7 @@ class Consumer(threading.Thread):
 
 
     def put_newhdfs_file(self,hdfs_dir,tmpfile):
-        newhdfs.upload(hdfs_dir,tmpfile,overwrite=True,n_threads=16,chunk_size=64000)
+        newhdfs.upload(hdfs_dir,tmpfile,overwrite=True,n_threads=1,chunk_size=2097152)
 
     ###format {'fileId': 244471141, 'permission': '644', 'replication': 3, 'blockSize': 134217728, 'group': 'supergroup', 'type': 'FILE', 'storagePolicy': 0, 'accessTime': 1520218141205, 'modificationTime': 1520014998148, 'length': 3515361, 'childrenNum': 0, 'owner': 'xgf', 'pathSuffix': ''}
     def get_oldfile_status(self,hdfs_url):
@@ -114,7 +114,18 @@ class Consumer(threading.Thread):
                 else:
                     logging.error('|'+hdfs_url+'|'+'file size error.')
             else:
-                logging.warning('|'+hdfs_url+'|'+'new hdfs exitst.')
+                if Consumer.get_newfile_status(self,hdfs_url)['length'] == Consumer.get_oldfile_status(self,hdfs_url)['length']:
+                    logging.warning('|'+hdfs_url+'|'+'new hdfs exitst.')
+                else:
+                    Consumer.get_oldhdfs_file(self, hdfs_url, hdfs_dir)
+                    tmp_file = './down' + hdfs_url
+                    tmp_size = os.path.getsize(tmp_file)
+                    if tmp_size == Consumer.get_oldfile_status(self, hdfs_url)['length']:
+                        Consumer.put_newhdfs_file(self, hdfs_url, tmp_file)
+                        Consumer.del_tmpfile(self, tmp_file)
+                        logging.info('|' + hdfs_url + '|' + 'file reupload success.')
+                    else:
+                        logging.error('|' + hdfs_url + '|' + 'file size error.')
 
 
 
@@ -143,7 +154,7 @@ def product():
             time.sleep(sleeptimes)
 
 
-    for i in range(8):
+    for i in range(4):
         t = Consumer(str(i))
         t.start()
 
