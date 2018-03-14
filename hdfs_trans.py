@@ -118,8 +118,10 @@ class Consumer(threading.Thread):
     def run(self):
         while 1:
             if queuepipe.empty() == True:
+                time.sleep(300)
                 n=str(datetime.datetime.now())
                 Consumer.ding_alert(self,n+'|当前迁移任务完成，请提交新任务。')
+                continue
 
             hdfs_url,hdfs_dir,file=queuepipe.get()
 
