@@ -23,10 +23,13 @@ cfg.read('config.conf')
 cfg.sections()
 hdfs_mvpath=cfg.get('path','hdfs_mvpath')
 newhdfs_url=cfg.get('newhdfs','url')
+oldhdfs_url=cfg.get('oldhdfs','url')
+oldhdfs_root=cfg.get('oldhdfs','root')
 dingrobot=cfg.get('alert','dingrobot')
 notice=cfg.get('alert','notice')
 
 newhdfs = InsecureClient(newhdfs_url, user="hdfs")
+oldhdfs = hdfs.Client(oldhdfs_url, root=oldhdfs_root, timeout=100, session=False)
 
 class Producer(threading.Thread):
     def __init__(self, name):
@@ -46,16 +49,42 @@ class Consumer(threading.Thread):
         threading.Thread.__init__(self)
         self.name=name
 
+    def get_oldfile_status(self,hdfs_url):
+        data=oldhdfs.status(hdfs_url,strict=False)
+        return data
+
+    def get_newfile_status(self,hdfs_url):
+        data=newhdfs.status(hdfs_url,strict=False)
+        return data
+
+    def ding_alert(self,message):
+        dingurl=dingrobot
+        atmobile=list(map(str, notice))
+        data={
+            "msgtype":"text",
+            "text":{
+                "content":message
+            },
+            "at":{
+                "atMobiles":atmobile,
+            }
+        }
+        headers = {'Content-Type': 'application/json; charset=utf-8'}
+        data=json.dumps(data)
+        requests.post(dingurl,headers=headers,data=data)
+
     def run(self):
         while 1:
             hdfs_url, hdfs_dir, file = queuepipe.get()
-            if '.temp' in file:
-                logging.error('|'+hdfs_url+'|'+'file size error.')
+            if Consumer.get_oldfile_status(self,hdfs_url) == None:
+                logging.error('|'+hdfs_url+'|'+'file data not unique.')
                 delstatus=newhdfs.delete(hdfs_url)
                 if delstatus == True:
-                    logging.warning('|'+hdfs_url+'|'+'error file deleted.')
+                    logging.warning('|'+hdfs_url+'|'+'duplicate file deleted.')
                 else:
-                    logging.error('|'+hdfs_url+'|'+'error file delete fail.')
+                    logging.error('|'+hdfs_url+'|'+'duplicate file delete fail.')
+                    n = str(datetime.datetime.now())
+                    Consumer.ding_alert(self, n + '|新集群重复数据清除失败')
 
 
 def product():
@@ -83,7 +112,7 @@ def product():
             time.sleep(sleeptimes)
 
 
-    for i in range(4):
+    for i in range(8):
         t = Consumer(str(i))
         t.start()
 
