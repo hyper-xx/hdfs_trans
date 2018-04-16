@@ -41,7 +41,8 @@ class Producer(threading.Thread):
             for file in files:
                 full_path = os.path.join(root, file)
                 data=[full_path,root,file]
-                queuepipe.put(data, block=True, timeout=None)
+                if '2018-03-19' not in data[0]:
+                    queuepipe.put(data, block=True, timeout=None)
 
 
 class Consumer(threading.Thread):

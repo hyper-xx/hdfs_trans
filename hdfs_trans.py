@@ -38,7 +38,7 @@ oldhdfs = hdfs.Client(oldhdfs_url, root=oldhdfs_root, timeout=100, session=False
 newhdfs = InsecureClient(newhdfs_url, user="hdfs")
 
 L=threading.Lock()
-
+hdfs_mvpathlist=hdfs_mvpath.strip(',').split(',')
 
 class Producer(threading.Thread):
     def __init__(self, name):
@@ -46,12 +46,13 @@ class Producer(threading.Thread):
         self.name = name
 
     def run(self):
-        for root, path, files in oldhdfs.walk(hdfs_mvpath):
-            for file in files:
-                full_path = os.path.join(root, file)
-                data=[full_path,root,file]
-                queuepipe.put(data, block=True, timeout=None)
-                #logging.info(full_path)
+        for i in range(len(hdfs_mvpathlist)):
+            for root, path, files in oldhdfs.walk(hdfs_mvpathlist[i]):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    data=[full_path,root,file]
+                    queuepipe.put(data, block=True, timeout=None)
+                    #logging.info(full_path)
 
 
 
