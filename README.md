@@ -9,7 +9,7 @@ hdfs数据迁移工具。
 - [x] 钉钉提醒
 - [ ] 邮件提醒
 - [x] 传输限速功能
-- [ ] 指定多目录迁移
+- [x] 指定多目录迁移
 
 
 ![dingding_alert.png](https://uploads.hyperxu.com/1520997532769.png)
