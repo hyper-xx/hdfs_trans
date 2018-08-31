@@ -47,12 +47,17 @@ class Producer(threading.Thread):
 
     def run(self):
         for i in range(len(hdfs_mvpathlist)):
-            for root, path, files in oldhdfs.walk(hdfs_mvpathlist[i]):
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    data=[full_path,root,file]
-                    queuepipe.put(data, block=True, timeout=None)
-                    #logging.info(full_path)
+            try:
+                for root, path, files in oldhdfs.walk(hdfs_mvpathlist[i]):
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        data=[full_path,root,file]
+                        queuepipe.put(data, block=True, timeout=None)
+                        #logging.info(full_path)
+            except:
+                logging.error(hdfs_mvpathlist[i] + '|not exist.')
+                pass
+            continue
 
 
 
